@@ -2,6 +2,12 @@
 
 A Python script that processes smart-glasses videos using GCP Vertex AI to enable natural language queries about video content.
 
+## Demo
+
+https://github.com/user-attachments/assets/4bd4b985-ce9a-4786-966e-cc735e7c8a30
+
+*Live demonstration of Video-Analyzer processing smart-glasses footage with AI-powered analysis*
+
 ## Features
 
 - **Video Segmentation**: Uses Google Cloud Video Intelligence API to segment videos into shots
@@ -9,42 +15,6 @@ A Python script that processes smart-glasses videos using GCP Vertex AI to enabl
 - **Vector Search**: Stores embeddings in Vertex Vector Search for efficient retrieval
 - **Natural Language Queries**: Query videos using natural language (e.g., "who did I meet at the gym?")
 - **AI Analysis**: Uses Gemini 2.5 Pro to analyze retrieved video segments for insights
-
-## Demo
-
-🎬 **Try Video-Analyzer with our demo video!**
-
-### Video Preview
-
-https://github.com/user-attachments/assets/4bd4b985-ce9a-4786-966e-cc735e7c8a30
-
-**🎬 [Download Demo Video](Video-Analyzer.mp4)** | **[View in Repository](Video-Analyzer.mp4)**
-
-**Video Details:**
-- ⏱️ **Duration**: ~7 seconds
-- 📏 **Size**: 24MB
-- 🎬 **Content**: Live demonstration of Video-Analyzer analyzing smart-glasses footage
-- 🔍 **Shows**: Real-time video segmentation, semantic search, and AI analysis
-
-**🎯 What You'll See:**
-- Smart-glasses video being processed
-- Automatic shot segmentation
-- Natural language queries being answered
-- AI-powered insights generation
-
-> **💡 Note**: The video plays directly in GitHub's interface with full controls!
-
-### Demo Video Download
-
-A sample demo video is available in the repository: [`Video-Analyzer.mp4`](Video-Analyzer.mp4) (24MB)
-
-This demonstrates the full video analysis pipeline including:
-- Video segmentation into meaningful shots
-- Semantic search capabilities
-- AI-powered content analysis
-- Real-time query processing
-
-**Note**: The demo video showcases the system analyzing smart-glasses footage and answering natural language questions about the content.
 
 ## Setup
 
