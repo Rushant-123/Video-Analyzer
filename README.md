@@ -150,14 +150,14 @@ Video Reasoning/
 The easiest way to use Video-Analyzer is through the web interface:
 
 ```bash
-# Install Streamlit if not already installed
-pip install streamlit
+# Install Gradio (compatible with Python 3.9.7+)
+pip install gradio
 
 # Run the web app
-streamlit run app.py
+python app.py
 ```
 
-Then open your browser to `http://localhost:8501` and:
+Then open your browser to `http://localhost:7860` and:
 1. 📤 Upload a video file
 2. 🔍 Ask a question about the video
 3. 🚀 Click "Analyze Video" to get AI-powered insights

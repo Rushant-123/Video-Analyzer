@@ -1,233 +1,222 @@
 #!/usr/bin/env python3
 """
 Video-Analyzer Web UI
-A Streamlit-based web interface for video analysis using GCP Vertex AI
+A Gradio-based web interface for video analysis using GCP Vertex AI
 """
 
-import streamlit as st
+import gradio as gr
 import tempfile
 import os
-import time
-from pathlib import Path
+import json
+from typing import List, Dict
 
 # Import our video reasoning pipeline
 from src.config import Settings
 from src.pipeline import VideoReasoningPipeline
 
 
-def main():
-    """Main Streamlit application"""
-    st.set_page_config(
-        page_title="Video-Analyzer",
-        page_icon="🎬",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
+def analyze_video(video_file, query: str) -> str:
+    """
+    Process video and return analysis results
+
+    Args:
+        video_file: Uploaded video file
+        query: User's question about the video
+
+    Returns:
+        Formatted analysis results as HTML string
+    """
+    if not video_file or not query:
+        return "<div style='color: red; padding: 10px;'>Please upload a video and enter a question.</div>"
+
+    try:
+        # Load settings
+        settings = Settings.from_env()
+        settings.validate()
+
+        # Initialize pipeline
+        pipeline = VideoReasoningPipeline(settings)
+
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
+            # Gradio gives us the file path directly
+            import shutil
+            shutil.copy2(video_file, tmp_file.name)
+            video_path = tmp_file.name
+
+        try:
+            # Process video (segment and embed)
+            yield "<div style='color: blue; padding: 10px;'>🎬 Processing video: segmenting and generating embeddings...</div>"
+
+            gcs_uri = pipeline.process_video(video_path)
+
+            # Query and analyze
+            yield "<div style='color: blue; padding: 10px;'>🤖 Analyzing video content with AI...</div>"
+
+            analyses = pipeline.query_and_analyze(query, top_k=3)
+
+            # Format results as HTML
+            result_html = "<div style='font-family: Arial, sans-serif;'>"
+            result_html += "<h2 style='color: #1f77b4;'>🎉 Analysis Complete!</h2>"
+
+            for i, analysis in enumerate(analyses, 1):
+                result_html += f"""
+                <div style='background-color: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 10px; border-left: 5px solid #1f77b4;'>
+                    <h4 style='color: #1f77b4; margin-top: 0;'>🎬 Clip {i}: {analysis['clip_start']:.1f}s - {analysis['clip_end']:.1f}s</h4>
+                    <p><strong>📝 Summary:</strong> {analysis['summary']}</p>
+                    <p><strong>🎯 Confidence:</strong> {analysis.get('confidence_score', 0.0):.2f}</p>
+                </div>
+                """
+
+            result_html += "<h3>📊 Full Results (JSON):</h3>"
+            result_html += f"<pre style='background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;'>{json.dumps(analyses, indent=2)}</pre>"
+            result_html += "</div>"
+
+            yield result_html
+
+        finally:
+            # Clean up temporary file
+            if os.path.exists(video_path):
+                os.unlink(video_path)
+
+    except Exception as e:
+        error_msg = f"""
+        <div style='color: red; padding: 10px; background-color: #ffebee; border-radius: 5px;'>
+            <h3>❌ Analysis Failed</h3>
+            <p>{str(e)}</p>
+            <p>This might be due to GCP service limits or network issues. Please check your credentials and try again.</p>
+        </div>
+        """
+        yield error_msg
+
+
+def create_interface():
+    """Create the Gradio interface"""
 
     # Custom CSS for better styling
-    st.markdown("""
-    <style>
-    .main-header {
+    css = """
+    .gradio-container {
+        max-width: 1200px;
+        margin: auto;
+    }
+    .title {
         text-align: center;
         color: #1f77b4;
         font-size: 3rem;
         font-weight: bold;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
     }
-    .sub-header {
+    .subtitle {
         text-align: center;
         color: #666;
         font-size: 1.2rem;
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
     }
-    .result-card {
-        background-color: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 10px;
-        border-left: 5px solid #1f77b4;
-        margin: 1rem 0;
-    }
-    .metric-card {
-        background-color: #e3f2fd;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        margin: 0.5rem;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    """
 
-    # Header
-    st.markdown('<h1 class="main-header">🎬 Video-Analyzer</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Upload a video and ask questions about its content using AI</p>', unsafe_allow_html=True)
+    # Create the interface
+    with gr.Blocks(title="Video-Analyzer", theme=gr.themes.Soft(), css=css) as interface:
 
-    # Sidebar with information
-    with st.sidebar:
-        st.header("ℹ️ About")
-        st.write("""
-        **Video-Analyzer** uses Google's AI to understand video content:
-
-        🔍 **Video Segmentation** - Automatically detects shots
-        🧠 **AI Embeddings** - Creates semantic representations
-        🎯 **Smart Search** - Finds relevant video segments
-        🤖 **Gemini Analysis** - Provides detailed insights
+        # Header
+        gr.HTML("""
+        <div class="title">🎬 Video-Analyzer</div>
+        <div class="subtitle">Upload a video and ask questions about its content using AI</div>
         """)
 
-        st.header("🔧 Tech Stack")
-        st.write("""
-        - **Google Cloud Vertex AI**
-        - **Gemini 2.5 Flash**
-        - **Video Intelligence API**
-        - **Multimodal Embeddings**
-        """)
+        # Sidebar with information
+        with gr.Accordion("ℹ️ About Video-Analyzer", open=False):
+            gr.Markdown("""
+            **Video-Analyzer** uses Google's AI to understand video content:
 
-        st.header("⚡ Features")
-        st.write("""
-        ✅ Natural language queries
-        ✅ Body language analysis
-        ✅ Promise detection
-        ✅ Action recognition
-        ✅ Timestamped results
-        """)
+            🔍 **Video Segmentation** - Automatically detects shots
+            🧠 **AI Embeddings** - Creates semantic representations
+            🎯 **Smart Search** - Finds relevant video segments
+            🤖 **Gemini Analysis** - Provides detailed insights
 
-    # Main content area
-    col1, col2 = st.columns([1, 1])
+            ### Tech Stack
+            - **Google Cloud Vertex AI**
+            - **Gemini 2.5 Flash**
+            - **Video Intelligence API**
+            - **Multimodal Embeddings**
 
-    with col1:
-        st.subheader("📤 Upload Video")
+            ### Features
+            ✅ Natural language queries
+            ✅ Body language analysis
+            ✅ Promise detection
+            ✅ Action recognition
+            ✅ Timestamped results
+            """)
 
-        # File uploader
-        uploaded_file = st.file_uploader(
-            "Choose a video file (MP4, AVI, MOV)",
-            type=["mp4", "avi", "mov", "mkv"],
-            help="Upload a short video (under 5 minutes for best results)"
-        )
+        # Main interface
+        with gr.Row():
+            # Input column
+            with gr.Column(scale=1):
+                gr.HTML("<h3>📤 Upload & Configure</h3>")
 
-        # Query input
-        query = st.text_input(
-            "🔍 Ask a question about the video:",
-            placeholder="e.g., 'What is being demonstrated?', 'What promises were made?', 'Describe the presenter's body language'",
-            help="Ask natural language questions about the video content"
-        )
-
-        # Process button
-        process_button = st.button(
-            "🚀 Analyze Video",
-            type="primary",
-            use_container_width=True,
-            disabled=not (uploaded_file and query)
-        )
-
-    with col2:
-        st.subheader("📊 Analysis Results")
-
-        # Results display area
-        results_placeholder = st.empty()
-
-        # Show sample results if no analysis has been run
-        if 'analysis_results' not in st.session_state:
-            with results_placeholder.container():
-                st.info("💡 Upload a video and ask a question to see AI-powered analysis!")
-
-                # Sample result preview
-                st.markdown("""
-                **Example Output:**
-                - **Clip 1 (0:10-0:25)**: Demonstrates the landing page of AVEA THE AI VILLAGE
-                - **Key Features**: Pixel art style, interactive buttons, user registration
-                - **Promises**: AI characters that evolve, safe digital space
-                - **Body Language**: Engaged and enthusiastic presenter
-                """)
-
-    # Processing logic
-    if process_button and uploaded_file and query:
-        # Clear previous results
-        results_placeholder.empty()
-
-        with results_placeholder.container():
-            with st.spinner("🔄 Initializing AI pipeline..."):
-                try:
-                    # Load settings
-                    settings = Settings.from_env()
-                    settings.validate()
-
-                    # Initialize pipeline
-                    pipeline = VideoReasoningPipeline(settings)
-                    st.success("✅ AI pipeline ready!")
-
-                except Exception as e:
-                    st.error(f"❌ Failed to initialize pipeline: {e}")
-                    st.error("Please check your .env file and GCP credentials")
-                    return
-
-            # Save uploaded file temporarily
-            with st.spinner("📁 Processing video upload..."):
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
-                    tmp_file.write(uploaded_file.read())
-                    video_path = tmp_file.name
-
-            try:
-                # Progress tracking
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-
-                # Step 1: Process video (segment and embed)
-                status_text.text("🎬 Processing video: segmenting and generating embeddings...")
-                progress_bar.progress(25)
-
-                gcs_uri = pipeline.process_video(video_path)
-                progress_bar.progress(50)
-
-                # Step 2: Query and analyze
-                status_text.text("🤖 Analyzing video content with AI...")
-                progress_bar.progress(75)
-
-                analyses = pipeline.query_and_analyze(query, top_k=3)
-                progress_bar.progress(100)
-
-                # Clear progress indicators
-                progress_bar.empty()
-                status_text.empty()
-
-                # Display results
-                st.success("🎉 Analysis complete!")
-
-                for i, analysis in enumerate(analyses, 1):
-                    with st.container():
-                        st.markdown(f"""
-                        <div class="result-card">
-                            <h4>🎬 Clip {i}: {analysis['clip_start']:.1f}s - {analysis['clip_end']:.1f}s</h4>
-                            <p><strong>📝 Summary:</strong> {analysis['summary']}</p>
-                            <p><strong>🎯 Confidence:</strong> {analysis.get('confidence_score', 0.0):.2f}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                # JSON download button
-                import json
-                json_data = json.dumps(analyses, indent=2)
-                st.download_button(
-                    label="📥 Download Full Results (JSON)",
-                    data=json_data,
-                    file_name="video_analysis_results.json",
-                    mime="application/json"
+                video_input = gr.File(
+                    label="Choose a video file",
+                    file_types=[".mp4", ".avi", ".mov", ".mkv"],
+                    elem_classes="file-input"
                 )
 
-            except Exception as e:
-                st.error(f"❌ Analysis failed: {e}")
-                st.error("This might be due to GCP service limits or network issues. Try again or check your credentials.")
+                query_input = gr.Textbox(
+                    label="🔍 Ask a question about the video",
+                    placeholder="e.g., 'What is being demonstrated?', 'What promises were made?', 'Describe the presenter's body language'",
+                    lines=2
+                )
 
-            finally:
-                # Clean up temporary file
-                if os.path.exists(video_path):
-                    os.unlink(video_path)
+                analyze_btn = gr.Button(
+                    "🚀 Analyze Video",
+                    variant="primary",
+                    size="lg"
+                )
 
-    # Footer
-    st.markdown("---")
-    st.markdown("""
-    <div style='text-align: center; color: #666;'>
-        <p>Built with ❤️ using Google Cloud Vertex AI & Streamlit</p>
-        <p><a href="https://github.com/Rushant-123/Video-Analyzer" target="_blank">View on GitHub</a></p>
-    </div>
-    """, unsafe_allow_html=True)
+            # Output column
+            with gr.Column(scale=1):
+                gr.HTML("<h3>📊 Analysis Results</h3>")
+
+                output_display = gr.HTML(
+                    value="<div style='text-align: center; color: #666; padding: 20px;'>💡 Upload a video and ask a question to see AI-powered analysis!</div>"
+                )
+
+        # Sample results preview
+        with gr.Accordion("📋 Example Output", open=False):
+            gr.Markdown("""
+            **Example Analysis Results:**
+            - **Clip 1 (0:10-0:25)**: Demonstrates the landing page of AVEA THE AI VILLAGE
+            - **Key Features**: Pixel art style, interactive buttons, user registration
+            - **Promises**: AI characters that evolve, safe digital space
+            - **Body Language**: Engaged and enthusiastic presenter
+            """)
+
+        # Connect the function
+        analyze_btn.click(
+            fn=analyze_video,
+            inputs=[video_input, query_input],
+            outputs=output_display
+        )
+
+        # Footer
+        gr.HTML("""
+        <hr style='margin: 20px 0;'>
+        <div style='text-align: center; color: #666;'>
+            <p>Built with ❤️ using Google Cloud Vertex AI & Gradio</p>
+            <p><a href="https://github.com/Rushant-123/Video-Analyzer" target="_blank" style='color: #1f77b4;'>View on GitHub</a></p>
+        </div>
+        """)
+
+    return interface
+
+
+def main():
+    """Launch the Gradio interface"""
+    interface = create_interface()
+    interface.launch(
+        server_name="0.0.0.0",
+        server_port=7860,
+        show_api=False,
+        share=False  # Set to True for public sharing
+    )
 
 
 if __name__ == "__main__":
