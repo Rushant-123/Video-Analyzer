@@ -136,7 +136,8 @@ Video Reasoning/
 │   │   ├── __init__.py
 │   │   └── formatter.py         # Output formatting
 │   └── pipeline.py              # Main pipeline orchestrator
-├── main.py                       # Entry point
+├── app.py                        # Streamlit web UI
+├── main.py                       # CLI entry point
 ├── requirements.txt
 ├── .env                         # Your credentials (not in git)
 └── README.md
@@ -144,7 +145,26 @@ Video Reasoning/
 
 ## Usage
 
-### Process a Video and Query
+### 🌐 Web Interface (Recommended)
+
+The easiest way to use Video-Analyzer is through the web interface:
+
+```bash
+# Install Streamlit if not already installed
+pip install streamlit
+
+# Run the web app
+streamlit run app.py
+```
+
+Then open your browser to `http://localhost:8501` and:
+1. 📤 Upload a video file
+2. 🔍 Ask a question about the video
+3. 🚀 Click "Analyze Video" to get AI-powered insights
+
+### 💻 Command Line Interface
+
+For programmatic use or automation:
 
 ```bash
 # Simple usage (reads from .env)
