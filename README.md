@@ -16,15 +16,14 @@ A Python script that processes smart-glasses videos using GCP Vertex AI to enabl
 
 ### Video Preview
 
-🎥 **[▶️ Watch Demo Video](Video-Analyzer.mp4)**
+🎥 **[▶️ Watch Demo Video](https://github.com/Rushant-123/Video-Analyzer/releases/download/v1.0.0/Video-Analyzer.mp4)**
 
-*Click above to play our demo video directly in your browser!*
+*Click above to play our demo video with GitHub's native video player!*
 
-> **📹 Viewing Options:**
-> 1. **Direct Play**: Click the link above - most browsers will play MP4 files directly
-> 2. **Download**: Right-click the link → "Save link as" to download
-> 3. **GitHub View**: Visit the [Video-Analyzer.mp4 file](Video-Analyzer.mp4) in GitHub's interface
-> 4. **Local Clone**: Clone the repo and play locally
+> **📹 How to View the Demo:**
+> 1. **GitHub Player**: Click the link above for the best viewing experience
+> 2. **Download**: Right-click → "Save link as" to download the video
+> 3. **Local Clone**: Clone the repo and play `Video-Analyzer.mp4` locally
 
 **Video Details:**
 - ⏱️ **Duration**: ~7 seconds
@@ -37,6 +36,8 @@ A Python script that processes smart-glasses videos using GCP Vertex AI to enabl
 - Automatic shot segmentation
 - Natural language queries being answered
 - AI-powered insights generation
+
+> **💡 Note**: The video plays directly in GitHub's interface with full controls!
 
 ### Demo Video Download
 
