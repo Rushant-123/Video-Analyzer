@@ -10,6 +10,20 @@ A Python script that processes smart-glasses videos using GCP Vertex AI to enabl
 - **Natural Language Queries**: Query videos using natural language (e.g., "who did I meet at the gym?")
 - **AI Analysis**: Uses Gemini 2.5 Pro to analyze retrieved video segments for insights
 
+## Demo
+
+🎬 **Try Video-Analyzer with our demo video!**
+
+A sample demo video is available in the repository: [`Video-Analyzer.mp4`](Video-Analyzer.mp4)
+
+This demonstrates the full video analysis pipeline including:
+- Video segmentation into meaningful shots
+- Semantic search capabilities
+- AI-powered content analysis
+- Real-time query processing
+
+**Note**: The demo video showcases the system analyzing smart-glasses footage and answering natural language questions about the content.
+
 ## Setup
 
 1. **Install dependencies**:
