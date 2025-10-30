@@ -16,9 +16,7 @@ A Python script that processes smart-glasses videos using GCP Vertex AI to enabl
 
 ### Video Preview
 
-https://github.com/user-attachments/assets/VIDEO-ID-HERE
-
-> **Note**: To embed the video, upload it as a GitHub Issue/PR comment attachment, then paste the URL above.
+https://github.com/user-attachments/assets/4bd4b985-ce9a-4786-966e-cc735e7c8a30
 
 **🎬 [Download Demo Video](Video-Analyzer.mp4)** | **[View in Repository](Video-Analyzer.mp4)**
 
