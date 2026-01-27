@@ -1,246 +1,198 @@
 # Video-Analyzer
 
-A Python script that processes smart-glasses videos using GCP Vertex AI to enable natural language queries about video content.
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Vertex%20AI-4285F4?style=flat&logo=googlecloud&logoColor=white)](https://cloud.google.com/vertex-ai)
+[![Gemini](https://img.shields.io/badge/Gemini-2.5-8E75B2?style=flat&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Gradio](https://img.shields.io/badge/Gradio-Web%20UI-FF7C00?style=flat&logo=gradio&logoColor=white)](https://gradio.app)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+**Transform first-person video into searchable, queryable knowledge using multimodal AI.**
+
+Video-Analyzer processes smart glasses and wearable camera footage through Google Cloud's AI stack, enabling natural language queries like *"What did I promise?"* or *"Who did I meet at the gym?"*
 
 ## Demo
 
 https://github.com/user-attachments/assets/4bd4b985-ce9a-4786-966e-cc735e7c8a30
 
-*Live demonstration of Video-Analyzer processing smart-glasses footage with AI-powered analysis*
+*AI-powered analysis of smart glasses footage with natural language queries*
 
-## Features
+## Architecture
 
-- **Video Segmentation**: Uses Google Cloud Video Intelligence API to segment videos into shots
-- **Multimodal Embeddings**: Embeds video segments using Vertex AI's `multimodalembedding@001` model
-- **Vector Search**: Stores embeddings in Vertex Vector Search for efficient retrieval
-- **Natural Language Queries**: Query videos using natural language (e.g., "who did I meet at the gym?")
-- **AI Analysis**: Uses Gemini 2.5 Pro to analyze retrieved video segments for insights
+```
+Video Input --> GCS Upload --> Shot Detection --> Multimodal Embeddings --> Vector Search
+                                                                                  |
+                                                                                  v
+                              Gemini Analysis <-- Segment Retrieval <-- Text Query
+```
+
+### Pipeline Flow
+
+| Stage | Service | Technology |
+|-------|---------|------------|
+| **1. Upload** | `StorageService` | Google Cloud Storage |
+| **2. Segment** | `SegmentationService` | Video Intelligence API |
+| **3. Embed** | `EmbeddingService` | Multimodal Embeddings (1408-D) |
+| **4. Index** | `VectorSearchService` | Vertex Vector Search / Pinecone |
+| **5. Analyze** | `AnalysisService` | Gemini 2.5 |
+
+### How It Works
+
+1. **Video Segmentation** - Video Intelligence API detects shot boundaries automatically
+2. **Semantic Embeddings** - Each segment becomes a 1408-dimensional vector capturing visual and audio content
+3. **Vector Storage** - Embeddings indexed for sub-second similarity search
+4. **Query Processing** - Natural language queries converted to embeddings and matched against video segments
+5. **AI Analysis** - Gemini analyzes retrieved segments and extracts structured insights
 
 ## Setup
 
-1. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Prerequisites
 
-2. **Configure environment**:
-   ```bash
-   cp env.example .env
-   # Edit .env with your actual credentials
-   # Make sure .env is in .gitignore!
-   ```
+- Python 3.9+
+- Google Cloud account with billing enabled
+- `gcloud` CLI (optional but recommended)
 
-3. **Required Environment Variables**:
-   ```bash
-   GOOGLE_CLOUD_PROJECT=your-project-id
-   GOOGLE_APPLICATION_CREDENTIALS=./path-to-service-account.json
-   GCS_BUCKET_NAME=your-bucket-name
-   GEMINI_API_KEY=your-gemini-api-key
-   VECTOR_SEARCH_INDEX_ENDPOINT_ID=your-endpoint-id  # Optional
-   VECTOR_SEARCH_DEPLOYED_INDEX_ID=your-index-name   # Optional
-   GCP_REGION=us-central1                            # Optional
-   GEMINI_MODEL=gemini-2.5-flash                     # Optional
-   ```
+### Installation
 
-4. **GCP Setup Requirements**:
+```bash
+git clone https://github.com/Rushant-123/Video-Analyzer.git
+cd Video-Analyzer
+pip install -r requirements.txt
+cp .env.example .env
+```
 
-### 🔧 **Complete GCP Setup Guide**
+### GCP Configuration
 
-#### **Step 1: Create GCP Project**
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Click "Select a project" → "New Project"
-3. Name your project (e.g., `video-reasoning-project`)
-4. Note the **Project ID** (not name) - this is your `GOOGLE_CLOUD_PROJECT`
-
-#### **Step 2: Enable Required APIs**
-1. Go to "APIs & Services" → "Library"
-2. Enable these APIs:
-   - **Vertex AI API**
-   - **Cloud Storage API**
-   - **Cloud Video Intelligence API**
-
-#### **Step 3: Create Service Account**
-1. Go to "IAM & Admin" → "Service Accounts"
-2. Click "Create Service Account"
-3. Name: `video-reasoning-sa`
-4. Grant these roles:
-   - **Storage Admin** (for GCS access)
-   - **Vertex AI User** (for AI models)
-   - **Service Usage Consumer** (for API access)
-5. Create a key:
-   - Click the service account → "Keys" → "Add Key" → "JSON"
-   - Download the JSON file
-   - Place it in your project directory
-   - This file path is your `GOOGLE_APPLICATION_CREDENTIALS`
-
-#### **Step 4: Create GCS Bucket**
-1. Go to "Cloud Storage" → "Buckets"
-2. Click "Create Bucket"
-3. Name: `your-unique-bucket-name` (must be globally unique)
-4. Region: `us-central1` (or your preferred region)
-5. This bucket name is your `GCS_BUCKET_NAME`
-
-#### **Step 5: Get Gemini API Key**
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Click "Create API Key"
-3. Copy the API key
-4. This is your `GEMINI_API_KEY`
-
-#### **Step 6: Enable Billing (Important!)**
-1. Go to "Billing" in GCP Console
-2. Enable billing for your project
-3. **Note**: GCP requires billing to be enabled for most AI services
-
-### 💡 **Quick Setup Commands**
-
-If you have `gcloud` CLI installed:
+#### Option A: Using gcloud CLI
 
 ```bash
 # Set project
 gcloud config set project YOUR_PROJECT_ID
 
-# Enable APIs
-gcloud services enable aiplatform.googleapis.com
-gcloud services enable storage.googleapis.com
-gcloud services enable videointelligence.googleapis.com
+# Enable required APIs
+gcloud services enable aiplatform.googleapis.com \
+                       storage.googleapis.com \
+                       videointelligence.googleapis.com
 
 # Create service account
-gcloud iam service-accounts create video-reasoning-sa \
-  --description="Video Reasoning Service Account" \
-  --display-name="Video Reasoning SA"
+gcloud iam service-accounts create video-analyzer-sa \
+  --display-name="Video Analyzer Service Account"
 
 # Grant permissions
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:video-reasoning-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:video-analyzer-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/storage.admin"
 
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:video-reasoning-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:video-analyzer-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/aiplatform.user"
 
-# Create key
-gcloud iam service-accounts keys create service-account-key.json \
-  --iam-account=video-reasoning-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com
+# Generate key file
+gcloud iam service-accounts keys create credentials.json \
+  --iam-account=video-analyzer-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
+
+#### Option B: Google Cloud Console
+
+1. Create project at [console.cloud.google.com](https://console.cloud.google.com)
+2. Enable APIs: Vertex AI, Cloud Storage, Video Intelligence
+3. Create service account with Storage Admin + Vertex AI User roles
+4. Download JSON key file
+
+### Environment Variables
+
+```bash
+# Required
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_APPLICATION_CREDENTIALS=./credentials.json
+GCS_BUCKET_NAME=your-bucket-name
+GEMINI_API_KEY=your-gemini-api-key
+
+# Optional
+GCP_REGION=us-central1
+GEMINI_MODEL=gemini-2.5-flash
+VECTOR_SEARCH_INDEX_ENDPOINT_ID=your-endpoint-id
+VECTOR_SEARCH_DEPLOYED_INDEX_ID=your-index-id
+```
+
+Get your Gemini API key at [makersuite.google.com](https://makersuite.google.com/app/apikey)
+
+## Usage
+
+### Web Interface
+
+```bash
+python app.py
+```
+
+Open `http://localhost:7860` and:
+1. Upload a video file
+2. Enter your question
+3. Click **Analyze Video**
+
+### Command Line
+
+```bash
+# Basic usage
+python main.py --video-path ./video.mp4 --query "What promises were made?"
+
+# With GCS video
+python main.py --video-path gs://bucket/video.mp4 --query "Who did I meet?"
+
+# Custom parameters
+python main.py --video-path ./video.mp4 \
+               --query "Describe the conversation" \
+               --top-k 5 \
+               --project-id my-project \
+               --region us-west1
+```
+
+### Programmatic
+
+```python
+from src.config import Settings
+from src.pipeline import VideoReasoningPipeline
+
+settings = Settings.from_env()
+pipeline = VideoReasoningPipeline(settings)
+
+gcs_uri = pipeline.process_video("meeting.mp4")
+results = pipeline.query_and_analyze("What action items were discussed?", top_k=3)
 ```
 
 ## Project Structure
 
 ```
-Video Reasoning/
+Video-Analyzer/
 ├── src/
-│   ├── config/
-│   │   ├── __init__.py
-│   │   └── settings.py          # Configuration management
+│   ├── config/settings.py      # Environment configuration
 │   ├── services/
-│   │   ├── __init__.py
-│   │   ├── storage.py           # GCS operations
-│   │   ├── segmentation.py      # Video Intelligence API
-│   │   ├── embeddings.py        # Multimodal embeddings
-│   │   ├── vector_search.py     # Vector Search
-│   │   └── analysis.py          # Gemini analysis
-│   ├── utils/
-│   │   ├── __init__.py
-│   │   └── formatter.py         # Output formatting
-│   └── pipeline.py              # Main pipeline orchestrator
-├── app.py                        # Streamlit web UI
-├── main.py                       # CLI entry point
-├── requirements.txt
-├── .env                         # Your credentials (not in git)
-└── README.md
+│   │   ├── storage.py          # GCS operations
+│   │   ├── segmentation.py     # Video Intelligence API
+│   │   ├── embeddings.py       # Multimodal embeddings
+│   │   ├── vector_search.py    # Vector similarity search
+│   │   └── analysis.py         # Gemini analysis
+│   ├── utils/formatter.py      # Output formatting
+│   └── pipeline.py             # Orchestration layer
+├── app.py                      # Gradio web interface
+├── main.py                     # CLI entry point
+└── requirements.txt
 ```
 
-## Usage
+## Tech Stack
 
-### 🌐 Web Interface (Recommended)
+| Component | Technology |
+|-----------|------------|
+| Video Processing | Google Cloud Video Intelligence API |
+| Embeddings | Vertex AI Multimodal Embeddings (`multimodalembedding@001`) |
+| Vector Search | Vertex Vector Search / Pinecone |
+| Analysis | Gemini 2.5 Pro/Flash |
+| Web UI | Gradio |
+| Storage | Google Cloud Storage |
 
-The easiest way to use Video-Analyzer is through the web interface:
+## License
 
-```bash
-# Install Gradio (compatible with Python 3.9.7+)
-pip install gradio
+MIT License - see [LICENSE](LICENSE) for details.
 
-# Run the web app
-python app.py
-```
+---
 
-Then open your browser to `http://localhost:7860` and:
-1. 📤 Upload a video file
-2. 🔍 Ask a question about the video
-3. 🚀 Click "Analyze Video" to get AI-powered insights
-
-### 💻 Command Line Interface
-
-For programmatic use or automation:
-
-```bash
-# Simple usage (reads from .env)
-python main.py \
-  --video-path ./video.mp4 \
-  --query "what did I promise?"
-
-# Or override with command line args
-python main.py \
-  --video-path ./video.mp4 \
-  --query "what did I promise?" \
-  --project-id your-project-id \
-  --region us-central1
-```
-
-### Query Options
-
-- `--video-path`: Local video file path or GCS URI (`gs://bucket/video.mp4`)
-- `--query`: Natural language question about the video content
-- `--project-id`: GCP project ID (overrides `GOOGLE_CLOUD_PROJECT` env var)
-- `--region`: GCP region (overrides `GCP_REGION` env var)
-- `--top-k`: Number of segments to retrieve and analyze (default: 10)
-
-## Output
-
-The script outputs:
-1. **Colorized Console Summary**: Top 3 analyzed segments with key insights
-2. **Full JSON Results**: Complete analysis for all retrieved segments
-
-### Sample Output Format
-```json
-{
-  "clip_start": 45.2,
-  "clip_end": 78.9,
-  "summary": "Meeting with John at the gym entrance",
-  "promises": ["Call him tomorrow about the project"],
-  "body_language": "Confident handshake, direct eye contact",
-  "confidence_score": 0.85,
-  "actions": ["Handshake", "Pointing at equipment"]
-}
-```
-
-## Cost and Rate Limits
-
-**Approximate costs** (based on GCP pricing as of 2024):
-
-- **Video Intelligence API**: ~$0.10-0.20 per minute of video
-- **Multimodal Embeddings**: ~$0.0002 per embedding (1408 dimensions)
-- **Vector Search**: ~$0.10 per 1000 queries + storage costs
-- **Gemini 2.5 Pro**: ~$0.001-0.002 per query
-
-**Rate Limits**:
-- Video Intelligence: 100 videos/hour
-- Multimodal Embeddings: 1000 requests/minute
-- Vector Search: Varies by index configuration
-- Gemini: 60 requests/minute
-
-## Architecture
-
-1. **Input Processing**: Upload local videos to GCS or use direct GCS URIs
-2. **Segmentation**: Video Intelligence API detects shot boundaries
-3. **Embedding**: Each segment gets a 1408-D multimodal embedding
-4. **Storage**: Embeddings stored in Vector Search with metadata
-5. **Query**: Text queries embedded and matched against video segments
-6. **Analysis**: Top segments analyzed by Gemini for structured insights
-
-## Security Notes
-
-- Store service account keys securely
-- Use environment variables for sensitive configuration
-- GCS bucket should have appropriate access controls
-- Consider VPC Service Controls for production deployments
-# Video-Analyzer
+Built with Google Cloud Vertex AI
